@@ -6,7 +6,6 @@ SUPABASE_URL = "https://uwmtavdejwfroevvadnp.supabase.co"
 SUPABASE_KEY = "sb_publishable_LQ8-fakghOGuDprdtoEhDQ_LnNfxPjV"
 
 mcp = FastMCP("记忆助手")
-mcp.settings.auth = None
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @mcp.tool()
@@ -28,13 +27,13 @@ def get_memories(category: str = "") -> str:
 
 @mcp.tool()
 def add_reminder(content: str, remind_at: str) -> str:
-    """添加提醒，时间格式：2025-06-10 09:00"""
+    """添加提醒"""
     db.table("reminders").insert({"content": content, "remind_at": remind_at}).execute()
     return f"✅ 提醒已设置：{content}（{remind_at}）"
 
 @mcp.tool()
 def check_reminders() -> str:
-    """检查今天及过期未完成的提醒"""
+    """检查未完成的提醒"""
     now = datetime.now().isoformat()
     data = db.table("reminders").select("*").lte("remind_at", now).eq("done", False).execute()
     if not data.data:
@@ -51,5 +50,4 @@ def complete_reminder(reminder_id: int) -> str:
     return f"✅ 提醒 #{reminder_id} 已完成"
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
-
+    mcp.run(transport="sse")
