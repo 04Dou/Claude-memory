@@ -6,6 +6,7 @@ SUPABASE_URL = "https://uwmtavdejwfroevvadnp.supabase.co"
 SUPABASE_KEY = "sb_publishable_LQ8-fakghOGuDprdtoEhDQ_LnNfxPjV"
 
 mcp = FastMCP("记忆助手")
+mcp.settings.auth = None
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @mcp.tool()
