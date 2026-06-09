@@ -50,6 +50,5 @@ def complete_reminder(reminder_id: int) -> str:
     return f"✅ 提醒 #{reminder_id} 已完成"
 
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 8000))
-    mcp.run(transport="streamable-http", port=port)
+    mcp.run(transport="streamable-http")
+
