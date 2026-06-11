@@ -100,5 +100,5 @@ def mcp():
 
     return jsonify({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": "Method not found"}})
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+port = int(os.environ.get("PORT", 8080))
+app.run(host="0.0.0.0", port=port)
