@@ -1,19 +1,17 @@
-from flask import Flask, request, jsonify, redirect, session
+from flask import Flask, request, jsonify, redirect
 import secrets
-import json
+import os
 from supabase import create_client
 from datetime import datetime
-import os
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 SUPABASE_URL = "https://uwmtavdejwfroevvadnp.supabase.co"
-SUPABASE_KEY = "你的新key"  # 填你的publishable key
+SUPABASE_KEY = "你的key"
 
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# OAuth相关
 AUTH_CODES = {}
 TOKENS = {}
 
@@ -29,7 +27,8 @@ def oauth_metadata():
         "grant_types_supported": ["authorization_code"],
         "code_challenge_methods_supported": ["S256"]
     })
-    @app.route("/oauth/register", methods=["POST"])
+
+@app.route("/oauth/register", methods=["POST"])
 def register():
     return jsonify({
         "client_id": "claude-client",
@@ -49,10 +48,10 @@ def authorize():
 
 @app.route("/oauth/token", methods=["POST"])
 def token():
-    token = secrets.token_urlsafe(32)
-    TOKENS[token] = True
+    new_token = secrets.token_urlsafe(32)
+    TOKENS[new_token] = True
     return jsonify({
-        "access_token": token,
+        "access_token": new_token,
         "token_type": "bearer"
     })
 
@@ -93,7 +92,7 @@ def mcp():
                 "category": args.get("category", "general")
             }).execute()
             return jsonify({"jsonrpc": "2.0", "id": req_id, "result": {
-                "content": [{"type": "text", "text": f"✅ 已记住：{args['content']}"}]
+                "content": [{"type": "text", "text": f"已记住：{args['content']}"}]
             }})
 
         if name == "get_memories":
@@ -111,5 +110,6 @@ def mcp():
 
     return jsonify({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": "Method not found"}})
 
-port = int(os.environ.get("PORT", 8080))
-app.run(host="0.0.0.0", port=port)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
