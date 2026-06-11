@@ -24,8 +24,19 @@ def oauth_metadata():
         "issuer": base,
         "authorization_endpoint": f"{base}/oauth/authorize",
         "token_endpoint": f"{base}/oauth/token",
+        "registration_endpoint": f"{base}/oauth/register",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code"],
+        "code_challenge_methods_supported": ["S256"]
+    })
+    @app.route("/oauth/register", methods=["POST"])
+def register():
+    return jsonify({
+        "client_id": "claude-client",
+        "client_secret": "not-needed",
+        "redirect_uris": request.json.get("redirect_uris", []),
+        "grant_types": ["authorization_code"],
+        "response_types": ["code"]
     })
 
 @app.route("/oauth/authorize")
