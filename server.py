@@ -1,63 +1,33 @@
-from flask import Flask, request, jsonify, redirect, Response, stream_with_context
-import json
-import secrets
-import os
+from mcp.server.fastmcp import FastMCP
 from supabase import create_client
-from datetime import datetime
-
-app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+import os
 
 SUPABASE_URL = "https://uwmtavdejwfroevvadnp.supabase.co"
-SUPABASE_KEY = "你的key"
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "你的key")
 
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-AUTH_CODES = {}
-TOKENS = {}
+mcp = FastMCP("记忆助手")
 
-@app.route("/.well-known/oauth-authorization-server")
-def oauth_metadata():
-    base = request.host_url.rstrip("/")
-    return jsonify({
-        "issuer": base,
-        "authorization_endpoint": f"{base}/oauth/authorize",
-        "token_endpoint": f"{base}/oauth/token",
-        "registration_endpoint": f"{base}/oauth/register",
-        "response_types_supported": ["code"],
-        "grant_types_supported": ["authorization_code"],
-        "code_challenge_methods_supported": ["S256"]
-    })
+@mcp.tool()
+def add_memory(content: str, category: str = "general") -> str:
+    """添加一条记忆"""
+    db.table("memories").insert({
+        "content": content,
+        "category": category
+    }).execute()
+    return f"已记住：{content}"
 
-@app.route("/oauth/register", methods=["POST"])
-def register():
-    return jsonify({
-        "client_id": "claude-client",
-        "client_secret": "not-needed",
-        "redirect_uris": request.json.get("redirect_uris", []),
-        "grant_types": ["authorization_code"],
-        "response_types": ["code"]
-    })
+@mcp.tool()
+def get_memories(category: str = "") -> str:
+    """读取所有记忆"""
+    q = db.table("memories").select("*")
+    if category:
+        q = q.eq("category", category)
+    data = q.order("created_at", desc=True).execute()
+    if not data.data:
+        return "暂无记忆"
+    return "\n".join([f"[{r['category']}] {r['content']}" for r in data.data])
 
-@app.route("/oauth/authorize")
-def authorize():
-    code = secrets.token_urlsafe(16)
-    redirect_uri = request.args.get("redirect_uri")
-    state = request.args.get("state", "")
-    AUTH_CODES[code] = {"redirect_uri": redirect_uri}
-    return redirect(f"{redirect_uri}?code={code}&state={state}")
-
-@app.route("/oauth/token", methods=["POST"])
-def token():
-    new_token = secrets.token_urlsafe(32)
-    TOKENS[new_token] = True
-    return jsonify({
-        "access_token": new_token,
-        "token_type": "bearer"
-    })
-
-from flask import Flask, request, jsonify, redirect, Response, stream_with_context
-import json
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
