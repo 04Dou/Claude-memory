@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, Response, stream_with_context
+import json
 import secrets
 import os
 from supabase import create_client
@@ -55,61 +56,8 @@ def token():
         "token_type": "bearer"
     })
 
-@app.route("/mcp", methods=["POST"])
-def mcp():
-    body = request.json
-    method = body.get("method")
-    params = body.get("params", {})
-    req_id = body.get("id")
-
-    if method == "initialize":
-        return jsonify({"jsonrpc": "2.0", "id": req_id, "result": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {"tools": {}},
-            "serverInfo": {"name": "记忆助手", "version": "1.0"}
-        }})
-
-    if method == "tools/list":
-        return jsonify({"jsonrpc": "2.0", "id": req_id, "result": {"tools": [
-            {"name": "add_memory", "description": "添加一条记忆",
-             "inputSchema": {"type": "object", "properties": {
-                 "content": {"type": "string"},
-                 "category": {"type": "string", "default": "general"}
-             }, "required": ["content"]}},
-            {"name": "get_memories", "description": "读取所有记忆",
-             "inputSchema": {"type": "object", "properties": {
-                 "category": {"type": "string", "default": ""}
-             }}}
-        ]}})
-
-    if method == "tools/call":
-        name = params.get("name")
-        args = params.get("arguments", {})
-
-        if name == "add_memory":
-            db.table("memories").insert({
-                "content": args["content"],
-                "category": args.get("category", "general")
-            }).execute()
-            return jsonify({"jsonrpc": "2.0", "id": req_id, "result": {
-                "content": [{"type": "text", "text": f"已记住：{args['content']}"}]
-            }})
-
-        if name == "get_memories":
-            q = db.table("memories").select("*")
-            if args.get("category"):
-                q = q.eq("category", args["category"])
-            data = q.order("created_at", desc=True).execute()
-            if not data.data:
-                text = "暂无记忆"
-            else:
-                text = "\n".join([f"[{r['category']}] {r['content']}" for r in data.data])
-            return jsonify({"jsonrpc": "2.0", "id": req_id, "result": {
-                "content": [{"type": "text", "text": text}]
-            }})
-
-    return jsonify({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": "Method not found"}})
-
+from flask import Flask, request, jsonify, redirect, Response, stream_with_context
+import json
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
